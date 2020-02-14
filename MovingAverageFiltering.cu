@@ -5,6 +5,7 @@
 struct Startup{
     int seed = time(nullptr);
     int random_range = 10;
+    int threads_per_block = 256;
 } startup;
 
 /*
@@ -39,16 +40,30 @@ DataSet generateRandomDataSet(int size){
     return data;
 }
 
-DataSet cudaCalculateSMA(DataSet input, int sample_size){
+__global__ void DeviceCalculateSMA(float* input, int input_size, float* result, int result_size, int sample_size){
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+
+    if (idx < result_size){
+        result[idx] = input[idx+sample_size];
+    }
+
+}
+
+DataSet CalculateSMA(DataSet input, int sample_size){
     DataSet host_result = {(float*)malloc(sizeof(float)*(input.size-sample_size)), input.size-sample_size};
 
-    float* device_input, device_result;
+    float* device_input, *device_result;
 
     gpuErrchk(cudaMalloc((void **)&device_input,  sizeOfDataSet(input) ));
     gpuErrchk(cudaMalloc((void **)&device_result, sizeOfDataSet(host_result) ));
 
     gpuErrchk(cudaMemcpy(device_input, input.values, sizeOfDataSet(input) , cudaMemcpyHostToDevice));
 
+    int threads_needed = host_result.size;
+    DeviceCalculateSMA<<<threads_needed/ startup.threads_per_block + 1, startup.threads_per_block>>> (device_input, input.size, device_result, host_result.size, sample_size);
+
+    gpuErrchk(cudaGetLastError());
+    gpuErrchk(cudaMemcpy(host_result.values, device_result, sizeOfDataSet(host_result), cudaMemcpyDeviceToHost));
 
     return host_result;
 }
@@ -60,5 +75,9 @@ void printDataSet(DataSet data){
 }
 
 int main(int argc, char** argv){
-    printDataSet( generateRandomDataSet(100) );
+    DataSet data = generateRandomDataSet(100);
+    printDataSet( data );
+    DataSet result = CalculateSMA(data, 16);
+    printf("\n");
+    printDataSet( result );
 }
