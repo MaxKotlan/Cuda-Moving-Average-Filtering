@@ -5,7 +5,7 @@
 struct Startup{
     int seed = time(nullptr);
     int random_range = 10;
-    int threads_per_block = 256;
+    int threads_per_block = 10;
 } startup;
 
 /*
@@ -44,7 +44,14 @@ __global__ void DeviceCalculateSMA(float* input, int input_size, float* result, 
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (idx < result_size){
-        result[idx] = input[idx+sample_size];
+
+        extern __shared__ float cache[];
+
+        int shared_copy_start = idx - sample_size;
+        cache[threadIdx.x] = shared_copy_start;
+        __syncthreads();
+
+        result[idx] = cache[threadIdx.x];
     }
 
 }
@@ -60,8 +67,7 @@ DataSet CalculateSMA(DataSet input, int sample_size){
     gpuErrchk(cudaMemcpy(device_input, input.values, sizeOfDataSet(input) , cudaMemcpyHostToDevice));
 
     int threads_needed = host_result.size;
-    DeviceCalculateSMA<<<threads_needed/ startup.threads_per_block + 1, startup.threads_per_block>>> (device_input, input.size, device_result, host_result.size, sample_size);
-
+    DeviceCalculateSMA<<<threads_needed/ startup.threads_per_block + 1, startup.threads_per_block, sizeof(float)*(host_result.size+sample_size)>>> (device_input, input.size, device_result, host_result.size, sample_size);
     gpuErrchk(cudaGetLastError());
     gpuErrchk(cudaMemcpy(host_result.values, device_result, sizeOfDataSet(host_result), cudaMemcpyDeviceToHost));
 
