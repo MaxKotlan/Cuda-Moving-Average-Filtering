@@ -47,15 +47,18 @@ __global__ void DeviceCalculateSMA(float* input, int input_size, float* result, 
 
         extern __shared__ float cache[];
 
-        int cache_index = threadIdx.x;
-
         /*Load Subset of values into shared memory*/
-        cache[cache_index] = input[idx];
+
+        int cachedDataSize = sample_size + blockDim.x;
+
+        for (int i = 0; i < cachedDataSize/blockDim.x; i++){
+            cache[threadIdx.x+ i*blockDim.x] = input[threadIdx.x+ i*blockDim.x];
+        }
         __syncthreads();
 
         float sum = 0;
         for (int i = 0; i < sample_size; i++)
-            sum += cache[cache_index+i];
+            sum += cache[(idx+i)%(blockDim.x+sample_size)];
         sum /= sample_size;
 
         result[idx] = sum;
@@ -89,7 +92,7 @@ void printDataSetI(DataSet data){
 
 void printDataSetF(DataSet data){
     for (int i = 0; i < data.size; i++)
-        printf("%.2f ", data.values[i]);
+        printf("%.1f ", data.values[i]);
     printf("\n");
 }
 
