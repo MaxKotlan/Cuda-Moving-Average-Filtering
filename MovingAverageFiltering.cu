@@ -5,7 +5,7 @@
 struct Startup{
     int seed = time(nullptr);
     int random_range = 100;
-    int threads_per_block = 1024;
+    int threads_per_block = 256;
 } startup;
 
 /*
@@ -75,7 +75,7 @@ as the sample size increases
 __global__ void DeviceCalculateSMA_Shared(float* input, int input_size, float* result, int result_size, int sample_size){
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
 
-    if (idx < result_size){
+    if (idx < input_size){
 
         extern __shared__ float cache[];
 
@@ -84,14 +84,14 @@ __global__ void DeviceCalculateSMA_Shared(float* input, int input_size, float* r
         /*Copy the data that will be used by the block into shared memory using all threads in the block.*/
         for (int i = 0; i < cachedDataSize/blockDim.x+1; i++){
             int cacheId = threadIdx.x+ i*blockDim.x;
-            if (cacheId < cachedDataSize)
+            if (cacheId < cachedDataSize && cacheId+blockDim.x *blockIdx.x < input_size)
                 cache[cacheId] = input[cacheId+blockDim.x *blockIdx.x];
         }
         __syncthreads();
 
         float sum = 0;
         for (int i = 0; i < sample_size; i++){
-            if(i + threadIdx.x < cachedDataSize)
+            if(i + threadIdx.x < cachedDataSize && i + idx < input_size)
                 sum += cache[i+threadIdx.x];
         }
 
@@ -110,10 +110,11 @@ DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
     int result_size = input.size-sample_size+1;
     DataSet host_result = {(float*)malloc(sizeof(float)*(result_size)), result_size};
 
-    float* device_input, *device_result;
+    float* device_input, *device_result, *cacheDebug;
 
     gpuErrchk(cudaMalloc((void **)&device_input,  sizeOfDataSet(input) ));
     gpuErrchk(cudaMalloc((void **)&device_result, sizeOfDataSet(host_result) ));
+    gpuErrchk(cudaMalloc((void **)&cacheDebug, sizeof(float)*startup.threads_per_block+sample_size))
 
     gpuErrchk(cudaMemcpy(device_input, input.values, sizeOfDataSet(input) , cudaMemcpyHostToDevice));
 
@@ -163,10 +164,17 @@ void printDataSetF(DataSet data){
 int main(int argc, char** argv){
     srand(0);
 
-    DataSet data = generateRandomDataSet(200000000);
+    DataSet data = generateRandomDataSet(10000);
     //printDataSetI( data );
-    DataSet shared = CalculateSMA(data, 10024, true);
-    DataSet global = CalculateSMA(data, 10024, false);
+    DataSet shared = CalculateSMA(data, 1325, true);
+    DataSet global = CalculateSMA(data, 1325, false);
+
+    //printf("\n");
+    //printDataSetF( shared );
+    //printf("\n");
+    //printDataSetF( global );
+    //printf("\n");
+
 
     printf("Each should be %d elements in size\n", global.size);
     CompareDataSet(global, shared);
