@@ -4,8 +4,8 @@
 
 struct Startup{
     int seed = time(nullptr);
-    int random_range = 10;
-    int threads_per_block = 10;
+    int random_range = 100;
+    int threads_per_block = 5;
 } startup;
 
 /*
@@ -47,11 +47,18 @@ __global__ void DeviceCalculateSMA(float* input, int input_size, float* result, 
 
         extern __shared__ float cache[];
 
-        int shared_copy_start = idx - sample_size;
-        cache[threadIdx.x] = shared_copy_start;
+        int cache_index = threadIdx.x;
+
+        /*Load Subset of values into shared memory*/
+        cache[cache_index] = input[idx];
         __syncthreads();
 
-        result[idx] = cache[threadIdx.x];
+        float sum = 0;
+        for (int i = 0; i < sample_size; i++)
+            sum += cache[cache_index+i];
+        sum /= sample_size;
+
+        result[idx] = sum;
     }
 
 }
@@ -74,16 +81,25 @@ DataSet CalculateSMA(DataSet input, int sample_size){
     return host_result;
 }
 
-void printDataSet(DataSet data){
+void printDataSetI(DataSet data){
     for (int i = 0; i < data.size; i++)
-        printf("%.0f ", data.values[i]);
+        printf("%.0f,", data.values[i]);
     printf("\n");
 }
 
-int main(int argc, char** argv){
-    DataSet data = generateRandomDataSet(100);
-    printDataSet( data );
-    DataSet result = CalculateSMA(data, 16);
+void printDataSetF(DataSet data){
+    for (int i = 0; i < data.size; i++)
+        printf("%.2f ", data.values[i]);
     printf("\n");
-    printDataSet( result );
+}
+
+
+int main(int argc, char** argv){
+    srand(startup.seed);
+
+    DataSet data = generateRandomDataSet(100);
+    printDataSetI( data );
+    DataSet result = CalculateSMA(data, 5);
+    printf("\n");
+    printDataSetF( result );
 }
