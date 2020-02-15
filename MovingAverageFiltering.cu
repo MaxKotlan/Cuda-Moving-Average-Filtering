@@ -40,25 +40,42 @@ DataSet generateRandomDataSet(int size){
     return data;
 }
 
-__global__ void DeviceCalculateSMA(float* input, int input_size, float* result, int result_size, int sample_size){
+__global__ void DeviceCalculateSMA_Global(float* input, int input_size, float* result, int result_size, int sample_size){
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+
+    if (idx < result_size){
+
+        float sum = 0;
+        for (int i = 0; i < sample_size; i++)
+            sum += input[idx+i];
+        sum /= sample_size;
+
+        result[idx] = sum;
+    }
+}
+
+__global__ void DeviceCalculateSMA_Shared(float* input, int input_size, float* result, int result_size, int sample_size){
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (idx < result_size){
 
         extern __shared__ float cache[];
 
-        /*Load Subset of values into shared memory*/
 
         int cachedDataSize = sample_size + blockDim.x;
 
+        /*Copy the data that will be used by the block into a cache.*/
         for (int i = 0; i < cachedDataSize/blockDim.x; i++){
-            cache[threadIdx.x+ i*blockDim.x] = input[threadIdx.x+ i*blockDim.x];
+            int cacheId = threadIdx.x+ i*blockDim.x;
+            if (cacheId < cachedDataSize)
+                cache[cacheId] = input[cacheId+blockDim.x * blockIdx.x];
         }
         __syncthreads();
 
         float sum = 0;
-        for (int i = 0; i < sample_size; i++)
-            sum += cache[(idx+i)%(blockDim.x+sample_size)];
+        for (int i = 0; i < sample_size; i++){
+            sum += cache[i+threadIdx.x];
+        }
         sum /= sample_size;
 
         result[idx] = sum;
@@ -77,7 +94,8 @@ DataSet CalculateSMA(DataSet input, int sample_size){
     gpuErrchk(cudaMemcpy(device_input, input.values, sizeOfDataSet(input) , cudaMemcpyHostToDevice));
 
     int threads_needed = host_result.size;
-    DeviceCalculateSMA<<<threads_needed/ startup.threads_per_block + 1, startup.threads_per_block, sizeof(float)*(host_result.size+sample_size)>>> (device_input, input.size, device_result, host_result.size, sample_size);
+    //DeviceCalculateSMA_Global<<<threads_needed/ startup.threads_per_block + 1, startup.threads_per_block>>> (device_input, input.size, device_result, host_result.size, sample_size);
+    DeviceCalculateSMA_Shared<<<threads_needed/ startup.threads_per_block + 1, startup.threads_per_block, sizeof(float)*(host_result.size+sample_size)>>> (device_input, input.size, device_result, host_result.size, sample_size);
     gpuErrchk(cudaGetLastError());
     gpuErrchk(cudaMemcpy(host_result.values, device_result, sizeOfDataSet(host_result), cudaMemcpyDeviceToHost));
 
