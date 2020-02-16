@@ -5,12 +5,8 @@
 struct Startup{
     int seed = time(nullptr);
     int random_range = 100;
-    int threads_per_block = 256;
-
+    int threads_per_block = 1024;
     int datasetsize = 10000;
-
-
-
     bool print = true;
     bool benchmark = false;
 } startup;
@@ -135,6 +131,13 @@ DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
 
     if (usesharedmemory){
         int shared_memory_allocation_size = sizeof(float)*(startup.threads_per_block+sample_size);
+
+        /*If shared memory too small, then optimized algorithm cannot be run. Exit*/
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, 0);
+        if (shared_memory_allocation_size > prop.sharedMemPerBlock) {printf("Cannot use shared Memory Algorithm. Not enough shared memory for dataset!"); exit(-1);}
+
+
         cudaEventRecord(start);
         DeviceCalculateSMA_Shared<<<threads_needed/ startup.threads_per_block + 1, startup.threads_per_block, shared_memory_allocation_size>>> (device_input, input.size, device_result, host_result.size, sample_size);
         cudaEventRecord(stop);
@@ -149,8 +152,11 @@ DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
 
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start, stop);
-    if (usesharedmemory) printf("Shared Memory: "); else printf("Global Memory: ");
-    printf("Kernel executed in %f milliseconds\n", milliseconds);
+    //if (usesharedmemory) printf("Shared Memory: "); else printf("Global Memory: ");
+    //printf("Kernel executed in %f milliseconds\n", milliseconds);
+
+    if (usesharedmemory) printf("%.6g,", milliseconds);
+    else printf("%.6g\n", milliseconds);
 
     gpuErrchk(cudaGetLastError());
     gpuErrchk(cudaMemcpy(host_result.values, device_result, sizeOfDataSet(host_result), cudaMemcpyDeviceToHost));
@@ -167,6 +173,30 @@ void printDataSet(DataSet data){
 }
 
 
+void compareAlgorithmsPerformance(){
+
+    for (int i = 4; i < 4000000000; i*=2) {
+
+        int j = i/2;
+        
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, 0);
+        
+
+        if (j > prop.sharedMemPerBlock/sizeof(float)) j = prop.sharedMemPerBlock/sizeof(float) - startup.threads_per_block;
+
+        printf("%d,%d,%d,", i, j, prop.sharedMemPerBlock);
+
+        DataSet data = generateRandomDataSet(i);
+        DataSet shared = CalculateSMA(data, j, true);
+        DataSet global = CalculateSMA(data, j, false);
+
+        free(data.values); free(shared.values); free(global.values);
+    
+    }
+}
+
+
 int main(int argc, char** argv){
 
     for (int i = 0; i < argc; i++){
@@ -178,10 +208,13 @@ int main(int argc, char** argv){
 
     srand(startup.seed);
 
+    compareAlgorithmsPerformance();
+
+    /*
     DataSet data = generateRandomDataSet(100);
     printDataSet( data );
-    DataSet shared = CalculateSMA(data, 2, true);
-    DataSet global = CalculateSMA(data, 2, false);
+    DataSet shared = CalculateSMA(data, 16, true);
+    DataSet global = CalculateSMA(data, 16, false);
 
     //benchmark();
 
@@ -191,7 +224,6 @@ int main(int argc, char** argv){
     printDataSet( global );
     printf("\n");
 
-
     printf("Each should be %d elements in size\n", global.size);
-    CompareDataSet(global, shared);
+    CompareDataSet(global, shared);*/
 }
