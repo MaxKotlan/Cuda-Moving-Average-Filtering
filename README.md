@@ -2,6 +2,7 @@
 ## Cuda Simple Moving Average (SMA) ##
 
 The purpose of this program is to benchmark the performance of using the GPU's shared memory, compared to just using the global memory. 
+To see how to use this program, please read the [Example Usage](EXAMPLE_USAGE.md) doc.
 
 ## Performance of Shared Memory over Global Memory
 Currently, memory bandwidth is the limiting factor for preforming faster computations, not processing power. In other words, it is much slower to access a byte of data from Global Memory, than it is to preform a floating point operation with data stored on a streaming processor's register. NVIDIA has three main types of memory, Global, Shared, and Local (registers). Shared memory is only available on a per-block basis, whereas global memory is shared among all blocks in a kernel. If an algorithm has multiple reads from a set of data in global memory, it can usually be improved by copying the data from global to shared memory, then preforming the operations on shared memory. 
