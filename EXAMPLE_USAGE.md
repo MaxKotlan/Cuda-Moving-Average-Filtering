@@ -9,6 +9,10 @@ This command will generate a data set with 100 elements, and will calculate a mo
     
 This command will generate a data set with 100000 elements, and will calculate a moving average with a sample period of 100. It will output the input to a csv file named Input.csv and the result to a file named result.csv 
 
+    MovingAverageFiltering.exe --single --print_result --data_size 100000 --sample_size 100000
+
+This will print only the result. In this specific case, since the datasize and the samplesize are equal, the result will be just the average, so only a single value is returned.  
+
 ### Benchmark
 
 Example Usage of benchmark Mode. Benchmark mode will output a csv file to the console (due to poor implementation on my part), that compares the performance of the global memory algorithm with the shared memory algorithm. 

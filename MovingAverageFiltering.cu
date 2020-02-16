@@ -10,6 +10,7 @@ struct Startup{
     int sample_size = 16;
     char* output_directory = ".";
     bool print = false;
+    bool print_result_only = false;
     bool save = false;
     bool benchmark = false;
     bool single = false;
@@ -237,6 +238,7 @@ int main(int argc, char** argv){
 
         if (strcmp(argv[i],  "--save")==0) startup.save = true;
         if (strcmp(argv[i],  "--print")==0) startup.print = true;
+        if (strcmp(argv[i],  "--print_result")==0) startup.print_result_only = true;
         if (strcmp(argv[i],  "--benchmark")==0) startup.benchmark = true;
         if (strcmp(argv[i],  "--single")==0) startup.single = true;
 
@@ -263,7 +265,7 @@ int main(int argc, char** argv){
         bool useSharedMemory =  (shared_memory_allocation_size <= prop.sharedMemPerBlock);
 
         DataSet shared = CalculateSMA(data, startup.sample_size, useSharedMemory);
-        if(startup.print) printDataSet(shared);
+        if(startup.print || startup.print_result_only) printDataSet(shared);
         if(startup.save) saveDataSetCSV(shared, "Result");
 
         free(shared.values); free(data.values);
