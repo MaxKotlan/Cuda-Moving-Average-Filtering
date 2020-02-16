@@ -183,9 +183,10 @@ void compareAlgorithmsPerformance(){
         cudaGetDeviceProperties(&prop, 0);
         
 
-        if (j > prop.sharedMemPerBlock/sizeof(float)) j = prop.sharedMemPerBlock/sizeof(float) - startup.threads_per_block;
+        //if (j > prop.sharedMemPerBlock/sizeof(float)) j = prop.sharedMemPerBlock/sizeof(float) - startup.threads_per_block;
+        if (j > 16) j = 16;
 
-        printf("%d,%d,%d,", i, j, prop.sharedMemPerBlock);
+        printf("%d,%d,", i, j);
 
         DataSet data = generateRandomDataSet(i);
         DataSet shared = CalculateSMA(data, j, true);
