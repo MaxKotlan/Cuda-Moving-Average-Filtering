@@ -6,10 +6,12 @@ struct Startup{
     int seed = time(nullptr);
     int random_range = 100;
     int threads_per_block = 1024;
-    int datasetsize = 10000;
+    int data_size = 10000;
+    int sample_size = 16;
     char* output_directory = ".";
     bool print = false;
     bool save = false;
+    bool benchmark = false;
     bool single = false;
 } startup;
 
@@ -226,24 +228,36 @@ int main(int argc, char** argv){
         if (strcmp(argv[i],  "--random_range")==0 && i+1 < argc) startup.random_range = atoi(argv[i+1]);
         if (strcmp(argv[i],  "--seed")==0 && i+1 < argc) startup.seed = atoi(argv[i+1]);
         if (strcmp(argv[i],  "--block_threads")==0 && i+1 < argc) startup.threads_per_block = atoi(argv[i+1]);
+
+
+        if (strcmp(argv[i],  "--sample_size")==0 && i+1 < argc) startup.sample_size = atoi(argv[i+1]);
+        if (strcmp(argv[i],  "--data_size")==0 && i+1 < argc) startup.data_size = atoi(argv[i+1]);
+
+
         if (strcmp(argv[i],  "--save")==0) startup.save = true;
         if (strcmp(argv[i],  "--print")==0) startup.print = true;
+        if (strcmp(argv[i],  "--benchmark")==0) startup.benchmark = true;
         if (strcmp(argv[i],  "--single")==0) startup.single = true;
 
     }
+
+    if (( startup.single || startup.benchmark ) == false)
+        printf("Please select a runtime mode. There are two options --single or --benchmark\n\n\t--benchmark mode will continually increase the set size and sample size and compare the two algorithms.\n\n\t--single mode will apply SMA on a single randomly generated set. By default the dataset will be 10,000 elements with a sample size of 16. These parameters can be changes.\n\n");
 
     srand(startup.seed);
 
     if (startup.single) {
 
-        DataSet data = generateRandomDataSet(100);
+        DataSet data = generateRandomDataSet(startup.data_size);
         if(startup.print) printDataSet(data);
         if(startup.save)   saveDataSetCSV(data, "Input");
 
-        DataSet shared = CalculateSMA(data, 16, true);
+        DataSet shared = CalculateSMA(data, startup.sample_size, true);
         if(startup.print) printDataSet(shared);
         if(startup.save) saveDataSetCSV(shared, "Result");
 
-    } else
+        free(shared.values); free(data.values);
+    }
+    if (startup.benchmark)
         AlgorithmsPerformanceBenchmark();
 }
