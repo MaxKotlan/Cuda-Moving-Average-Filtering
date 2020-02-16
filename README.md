@@ -18,13 +18,13 @@ The following is the results on both a linear and logarithmic scale:
 ![Linear Scale](img/benchmark.png)
 ![Logarithmic Scale](img/benchmark_logarithmic.png)
 
-At the final iteration, when the data set contained 268,435,456 elements (and the sample size being 11264), the shared memory version of the algorithm had a 419.5% improvement over its global memory only counterpart taking only 6.7 seconds to execute over 34.8 seconds. 
+At the final iteration, when the data set contained 268,435,456 elements (and the sample size being 11264), the shared memory version of the algorithm had a 80.7% decrease in execution time over its global memory only counterpart taking only 6.7 seconds to execute instead of 34.8 seconds. 
 
 Of course, this is an extreme example. In most cases, when people are computing a simple moving average, they'll typically select a small sample period. A very common one is 16, so we'll test it with that. In this scenario, the algorithm did not perform as well. with the larger sample_size.
 
 ![Linear Scale](img/benchmark_16.png)
 ![Logarithmic Scale](img/benchmark_16_logarithmic.png)
 
-Again at the final iteration, the dataset contained 268,435,456 elements (except this time the samplesize was 16). The shared memory version of the algorithm only has a 10% decrease in execution time. (Shared memory took 41.5 milliseconds. Global memory version took 45.9 milliseconds). 
+Again at the final iteration, the dataset contained 268,435,456 elements (except this time the samplesize was 16). The shared memory version of the algorithm only has a 9.5% decrease in execution time. (Shared memory took 41.5 milliseconds. Global memory version took 45.9 milliseconds). 
 
 As a result, this algorithm is mainly efficient for high sample_size values and high threads per block values. 
