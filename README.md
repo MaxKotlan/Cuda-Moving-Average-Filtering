@@ -16,15 +16,15 @@ Tested with a GTX 980, which has 49152 bytes of shared memory per block, I was a
 Initally, I started with a random dataset which contained 4 elements. The moving samplesize was initially set to 2. Each iteration of the test, I doubled the dataset size, and I doubled the samplesize. Once the samplesize maxed out shared memory, I left it to the maximum amount that would fit in shared memory, which in my specific case was 11264 *(which happened when the dataset size was 32768)*. The dataset size continued to double, however the samplesize remained 11264. If it did not, the two algorithms could not be compared to each other. Only the global memory algorithm would work. 
 
 The following is the results on both a linear and logarithmic scale:
-![Linear Scale](img/benchmark.PNG)
-![Logarithmic Scale](img/benchmark_logarithmic.PNG)
+![Linear Scale](img/benchmark.png)
+![Logarithmic Scale](img/benchmark_logarithmic.png)
 
 At the final iteration, when the data set contained 268,435,456 elements (and the sample size being 11264), the shared memory version of the algorithm had a 419.5% improvement over its global memory only counterpart taking only 6.7 seconds to execute over 34.8 seconds. 
 
 Of course, this is an extreme example. In most cases, when people are computing a simple moving average, they'll typically select a small sample period. A very common one, is 16, so we'll test it with that. In this scenario, the algorithm did not preform as well. with the larger sample_size.
 
-![Linear Scale](img/benchmark_16.PNG)
-![Logarithmic Scale](img/benchmark_16_logarithmic.PNG)
+![Linear Scale](img/benchmark_16.png)
+![Logarithmic Scale](img/benchmark_16_logarithmic.png)
 
 Again at the final iteration, the dataset contained 268,435,456 elements (except this time the samplesize was 16). The shared memory version of the algorithm only has a 10% decrease in execution time. (Shared memory took 41.5 miliseconds. Global memory version took 45.9 miliseconds. 
 
