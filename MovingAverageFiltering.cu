@@ -255,7 +255,14 @@ int main(int argc, char** argv){
         if(startup.print) printDataSet(data);
         if(startup.save)   saveDataSetCSV(data, "Input");
 
-        DataSet shared = CalculateSMA(data, startup.sample_size, true);
+        int shared_memory_allocation_size = sizeof(float)*(startup.threads_per_block+startup.sample_size);
+
+
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, 0);
+        bool useSharedMemory =  (shared_memory_allocation_size <= prop.sharedMemPerBlock);
+
+        DataSet shared = CalculateSMA(data, startup.sample_size, useSharedMemory);
         if(startup.print) printDataSet(shared);
         if(startup.save) saveDataSetCSV(shared, "Result");
 
