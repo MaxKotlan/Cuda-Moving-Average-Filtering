@@ -113,6 +113,11 @@ __global__ void DeviceCalculateSMA_Shared(float* input, int input_size, float* r
 }
 
 DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
+    if(sample_size == 1) { printf("Warning! Samplesize is 1. Result will equal input dataset.\n"); }
+    if(input.size < 1) { printf("Cannot compute a moving average with an empty dataset.\n"); exit(-1); }
+    if(sample_size < 1) { printf("Cannot compute a moving average with a samplesize of 0.\n"); exit(-1); }
+    if(sample_size > input.size) { printf("Error! Sample Size is larger than dataset. Please make samplesize a value less than or equal to dataset size.\n"); exit(-1); }
+    
     int result_size = input.size-sample_size+1;
     DataSet host_result = {(float*)malloc(sizeof(float)*(result_size)), result_size};
 
@@ -157,7 +162,7 @@ DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
 
 void printDataSet(DataSet data){
     for (int i = 0; i < data.size; i++)
-        printf("%.6g ", data.values[i]);
+        printf("%.6g, ", data.values[i]);
     printf("\n");
 }
 
@@ -175,8 +180,8 @@ int main(int argc, char** argv){
 
     DataSet data = generateRandomDataSet(100);
     printDataSet( data );
-    DataSet shared = CalculateSMA(data, 50, true);
-    DataSet global = CalculateSMA(data, 50, false);
+    DataSet shared = CalculateSMA(data, 2, true);
+    DataSet global = CalculateSMA(data, 2, false);
 
     //benchmark();
 
