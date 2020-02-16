@@ -6,6 +6,13 @@ struct Startup{
     int seed = time(nullptr);
     int random_range = 100;
     int threads_per_block = 256;
+
+    int datasetsize = 10000;
+
+
+
+    bool print = true;
+    bool benchmark = false;
 } startup;
 
 /*
@@ -48,7 +55,7 @@ bool CompareDataSet(DataSet d1, DataSet d2){
             printf("Dataset is different at %dth element. D1: %f, D2: %f", i, d1.values[i],  d2.values[i] );
             return false;
         }
-        printf("D1 and D2 are equal!");
+    printf("D1 and D2 are equal!");
     return true;
 
 }
@@ -77,6 +84,7 @@ __global__ void DeviceCalculateSMA_Shared(float* input, int input_size, float* r
 
     if (idx < input_size){
 
+        /*Shared memory. Size passed in with kernel parameters*/
         extern __shared__ float cache[];
 
         int cachedDataSize = sample_size + blockDim.x;
@@ -89,32 +97,29 @@ __global__ void DeviceCalculateSMA_Shared(float* input, int input_size, float* r
         }
         __syncthreads();
 
+        /*compute the sum using shared memory*/
         float sum = 0;
         for (int i = 0; i < sample_size; i++){
             if(i + threadIdx.x < cachedDataSize && i + idx < input_size)
                 sum += cache[i+threadIdx.x];
         }
-
         sum /= sample_size;
-        result[idx] = sum;
+
+        /*store in global memory*/
+        if (idx < result_size)
+            result[idx] = sum;
     }
 
-}
-
-void printTime(clock_t totaltime){
-    int msec = totaltime / CLOCKS_PER_SEC;
-    printf("Done in %d micro sec!\n", msec);
 }
 
 DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
     int result_size = input.size-sample_size+1;
     DataSet host_result = {(float*)malloc(sizeof(float)*(result_size)), result_size};
 
-    float* device_input, *device_result, *cacheDebug;
+    float* device_input, *device_result;
 
     gpuErrchk(cudaMalloc((void **)&device_input,  sizeOfDataSet(input) ));
     gpuErrchk(cudaMalloc((void **)&device_result, sizeOfDataSet(host_result) ));
-    gpuErrchk(cudaMalloc((void **)&cacheDebug, sizeof(float)*startup.threads_per_block+sample_size))
 
     gpuErrchk(cudaMemcpy(device_input, input.values, sizeOfDataSet(input) , cudaMemcpyHostToDevice));
 
@@ -134,16 +139,18 @@ DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
         DeviceCalculateSMA_Global<<<threads_needed/ startup.threads_per_block + 1, startup.threads_per_block>>> (device_input, input.size, device_result, host_result.size, sample_size);
         cudaEventRecord(stop);
     }
-    gpuErrchk(cudaGetLastError());
-    gpuErrchk(cudaMemcpy(host_result.values, device_result, sizeOfDataSet(host_result), cudaMemcpyDeviceToHost));
 
     cudaEventSynchronize(stop);
 
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start, stop);
-    if (usesharedmemory) printf("Shared Memory: ");
-    else printf("Global Memory: ");
+    if (usesharedmemory) printf("Shared Memory: "); else printf("Global Memory: ");
     printf("Kernel executed in %f milliseconds\n", milliseconds);
+
+    gpuErrchk(cudaGetLastError());
+    gpuErrchk(cudaMemcpy(host_result.values, device_result, sizeOfDataSet(host_result), cudaMemcpyDeviceToHost));
+    gpuErrchk(cudaFree(device_result)); gpuErrchk(cudaFree(device_input));
+
 
     return host_result;
 }
@@ -160,20 +167,53 @@ void printDataSetF(DataSet data){
     printf("\n");
 }
 
+void benchmark(){
+    DataSet data;
+    for (int i = 712; i < 10000; i++){
+        data = generateRandomDataSet(i);
+        for (int j = 1; j < i; j++){
+            for (int k = 763; k < 764; k++){
+                startup.threads_per_block = k;
+                DataSet shared = CalculateSMA(data, j, true);
+                DataSet global = CalculateSMA(data, j, false);
+                if (CompareDataSet(global, shared) != true){
+                    printf("Failed at SetSize: %d Sample_Size: %d, BlockSize: %d", i, j, k);
+                    exit(0);
+                }
+                if (i%2 == 0 && j == i -1) printf("On SetSize %d, SampleSize %d\n", i, j);
+                free(shared.values);
+                free(global.values);
+            }
+        }
+        free(data.values);
+    }
+    printf("Benchmark Passed! Cache is the same in all cases.!\n");
+}
+
 
 int main(int argc, char** argv){
-    srand(0);
+
+    for (int i = 0; i < argc; i++){
+        //if (strcmp(argv[i],  "--help")==0) {printf("%s", help); exit(-1); }
+        if (strcmp(argv[i],  "--random_range")==0 && i+1 < argc) startup.random_range = atoi(argv[i+1]);
+        if (strcmp(argv[i],  "--seed")==0 && i+1 < argc) startup.seed = atoi(argv[i+1]);
+        if (strcmp(argv[i],  "--block_threads")==0 && i+1 < argc) startup.threads_per_block = atoi(argv[i+1]);
+    }
+
+    srand(startup.seed);
 
     DataSet data = generateRandomDataSet(10000);
-    //printDataSetI( data );
+    printDataSetI( data );
     DataSet shared = CalculateSMA(data, 1325, true);
     DataSet global = CalculateSMA(data, 1325, false);
 
-    //printf("\n");
-    //printDataSetF( shared );
-    //printf("\n");
-    //printDataSetF( global );
-    //printf("\n");
+    //benchmark();
+
+    printf("\n");
+    printDataSetF( shared );
+    printf("\n");
+    printDataSetF( global );
+    printf("\n");
 
 
     printf("Each should be %d elements in size\n", global.size);
