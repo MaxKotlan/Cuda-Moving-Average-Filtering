@@ -8,7 +8,8 @@ struct Startup{
     int threads_per_block = 1024;
     int datasetsize = 10000;
     char* output_directory = ".";
-    bool print = true;
+    bool print = false;
+    bool save = false;
     bool benchmark = false;
 } startup;
 
@@ -153,11 +154,11 @@ DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
 
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start, stop);
-    //if (usesharedmemory) printf("Shared Memory: "); else printf("Global Memory: ");
-    //printf("Kernel executed in %f milliseconds\n", milliseconds);
+    if (usesharedmemory) printf("Shared Memory: "); else printf("Global Memory: ");
+    printf("Kernel executed in %f milliseconds\n", milliseconds);
 
-    if (usesharedmemory) printf("%.6g,", milliseconds);
-    else printf("%.6g\n", milliseconds);
+    //if (usesharedmemory) printf("%.6g,", milliseconds);
+    //else printf("%.6g\n", milliseconds);
 
     gpuErrchk(cudaGetLastError());
     gpuErrchk(cudaMemcpy(host_result.values, device_result, sizeOfDataSet(host_result), cudaMemcpyDeviceToHost));
@@ -191,9 +192,9 @@ void saveDataSetCSV(DataSet data, char* fileName){
 }
 
 
-void compareAlgorithmsPerformance(){
+void AlgorithmsPerformanceBenchmark(){
 
-    for (int i = 4; i < 4000000000; i*=2) {
+    for (int i = 4; i <= 268435456; i*=2) {
 
         int j = i/2;
         
@@ -223,29 +224,25 @@ int main(int argc, char** argv){
         if (strcmp(argv[i],  "--random_range")==0 && i+1 < argc) startup.random_range = atoi(argv[i+1]);
         if (strcmp(argv[i],  "--seed")==0 && i+1 < argc) startup.seed = atoi(argv[i+1]);
         if (strcmp(argv[i],  "--block_threads")==0 && i+1 < argc) startup.threads_per_block = atoi(argv[i+1]);
+        if (strcmp(argv[i],  "--save")==0< argc) startup.save = true;
+        if (strcmp(argv[i],  "--print")==0< argc) startup.print = true;
+
     }
 
     srand(startup.seed);
 
-    //compareAlgorithmsPerformance();
+    if (startup.benchmark) AlgorithmsPerformanceBenchmark();
+
+    else {
 
     
-    DataSet data = generateRandomDataSet(100);
-    saveDataSetCSV(data, "Input");
-    /*printDataSet( data );*/
-    DataSet shared = CalculateSMA(data, 16, true);
-    //DataSet global = CalculateSMA(data, 16, false);
-    saveDataSetCSV(shared, "Input");
+        DataSet data = generateRandomDataSet(100);
+        if(startup.print) printDataSet(data);
+        if(startup.save)   saveDataSetCSV(data, "Input");
 
-    /*
-    //benchmark();
+        DataSet shared = CalculateSMA(data, 16, true);
+        if(startup.print) printDataSet(shared);
+        if(startup.save) saveDataSetCSV(shared, "Result");
 
-    printf("\n");
-    printDataSet( shared );
-    printf("\n");
-    printDataSet( global );
-    printf("\n");
-
-    printf("Each should be %d elements in size\n", global.size);
-    CompareDataSet(global, shared);*/
+    }
 }
