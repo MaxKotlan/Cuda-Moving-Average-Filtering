@@ -7,6 +7,7 @@ struct Startup{
     int random_range = 100;
     int threads_per_block = 1024;
     int datasetsize = 10000;
+    char* output_directory = ".";
     bool print = true;
     bool benchmark = false;
 } startup;
@@ -172,6 +173,23 @@ void printDataSet(DataSet data){
     printf("\n");
 }
 
+void saveDataSetCSV(DataSet data, char* fileName){
+
+    char fileNameBuffer[256];
+
+    snprintf(fileNameBuffer, sizeof fileNameBuffer, "%s/%s%s", startup.output_directory, fileName, ".csv");
+
+    FILE* fp = fopen( fileNameBuffer, "w");
+    if (fp == nullptr) printf("Could not log to file\n");
+    else {
+        for (int i = 0; i < data.size; i++){
+            fprintf(fp, "%.6g,", data.values[i]);
+        }
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+}
+
 
 void compareAlgorithmsPerformance(){
 
@@ -209,14 +227,17 @@ int main(int argc, char** argv){
 
     srand(startup.seed);
 
-    compareAlgorithmsPerformance();
+    //compareAlgorithmsPerformance();
+
+    
+    DataSet data = generateRandomDataSet(100);
+    saveDataSetCSV(data, "Input");
+    /*printDataSet( data );*/
+    DataSet shared = CalculateSMA(data, 16, true);
+    //DataSet global = CalculateSMA(data, 16, false);
+    saveDataSetCSV(shared, "Input");
 
     /*
-    DataSet data = generateRandomDataSet(100);
-    printDataSet( data );
-    DataSet shared = CalculateSMA(data, 16, true);
-    DataSet global = CalculateSMA(data, 16, false);
-
     //benchmark();
 
     printf("\n");
