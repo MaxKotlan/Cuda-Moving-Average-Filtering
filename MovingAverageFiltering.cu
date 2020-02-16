@@ -157,10 +157,11 @@ DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start, stop);
 
-    if (startup.single) {
+    if (startup.single){
         if (usesharedmemory) printf("Shared Memory: "); else printf("Global Memory: ");
         printf("Kernel executed in %f milliseconds\n", milliseconds);
-    } else {
+    }
+    if (startup.benchmark) {
         if (usesharedmemory) printf("%.6g,", milliseconds);
         else printf("%.6g\n", milliseconds);
     }
@@ -243,6 +244,8 @@ int main(int argc, char** argv){
 
     if (( startup.single || startup.benchmark ) == false)
         printf("Please select a runtime mode. There are two options --single or --benchmark\n\n\t--benchmark mode will continually increase the set size and sample size and compare the two algorithms.\n\n\t--single mode will apply SMA on a single randomly generated set. By default the dataset will be 10,000 elements with a sample size of 16. These parameters can be changes.\n\n");
+
+    if (startup.single && startup.benchmark) { printf("You cannot run both modes at the same time. Please use only --single or only --benchmark"); exit(0); }
 
     srand(startup.seed);
 
