@@ -16,6 +16,6 @@ Tested with a GTX 980, which has 49152 bytes of shared memory per block, I was a
 Initally, I started with a random dataset which contained 4 elements. The moving samplesize was initially set to 2. Each iteration of the test, I doubled the dataset size, and I doubled the samplesize. Once the samplesize maxed out shared memory, I left it to the maximum amount that would fit in shared memory, which in my specific case was 11264 *(which happened when the dataset size was 32768)*. The dataset size continued to double, however the samplesize remained 11264. If it did not, the two algorithms could not be compared to each other. Only the global memory algorithm would work. 
 
 The following is the results on both a linear and logarithmic scale:
-![Linear Scale](img/benchmark.PNG)
-![Logarithmic Scale](img/benchmark_logarithmic.PNG)
+![Linear Scale](img/benchmark.png)
+![Logarithmic Scale](img/benchmark_logarithmic.png)
 
