@@ -155,39 +155,10 @@ DataSet CalculateSMA(DataSet input, int sample_size, bool usesharedmemory){
     return host_result;
 }
 
-void printDataSetI(DataSet data){
+void printDataSet(DataSet data){
     for (int i = 0; i < data.size; i++)
-        printf("%.0f,", data.values[i]);
+        printf("%.6g ", data.values[i]);
     printf("\n");
-}
-
-void printDataSetF(DataSet data){
-    for (int i = 0; i < data.size; i++)
-        printf("%.4f ", data.values[i]);
-    printf("\n");
-}
-
-void benchmark(){
-    DataSet data;
-    for (int i = 712; i < 10000; i++){
-        data = generateRandomDataSet(i);
-        for (int j = 1; j < i; j++){
-            for (int k = 763; k < 764; k++){
-                startup.threads_per_block = k;
-                DataSet shared = CalculateSMA(data, j, true);
-                DataSet global = CalculateSMA(data, j, false);
-                if (CompareDataSet(global, shared) != true){
-                    printf("Failed at SetSize: %d Sample_Size: %d, BlockSize: %d", i, j, k);
-                    exit(0);
-                }
-                if (i%2 == 0 && j == i -1) printf("On SetSize %d, SampleSize %d\n", i, j);
-                free(shared.values);
-                free(global.values);
-            }
-        }
-        free(data.values);
-    }
-    printf("Benchmark Passed! Cache is the same in all cases.!\n");
 }
 
 
@@ -202,17 +173,17 @@ int main(int argc, char** argv){
 
     srand(startup.seed);
 
-    DataSet data = generateRandomDataSet(10000);
-    printDataSetI( data );
-    DataSet shared = CalculateSMA(data, 1325, true);
-    DataSet global = CalculateSMA(data, 1325, false);
+    DataSet data = generateRandomDataSet(100);
+    printDataSet( data );
+    DataSet shared = CalculateSMA(data, 50, true);
+    DataSet global = CalculateSMA(data, 50, false);
 
     //benchmark();
 
     printf("\n");
-    printDataSetF( shared );
+    printDataSet( shared );
     printf("\n");
-    printDataSetF( global );
+    printDataSet( global );
     printf("\n");
 
 
