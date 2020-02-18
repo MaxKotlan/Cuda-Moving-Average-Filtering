@@ -1,5 +1,5 @@
 
-## Cuda Simple Moving Average (SMA) ##
+# Cuda Simple Moving Average (SMA) #
 
 The purpose of this program is to benchmark the performance of using the GPU's shared memory, compared to just using the global memory. 
 To see how to use this program, please read the [Example Usage](EXAMPLE_USAGE.md) doc.
@@ -9,8 +9,10 @@ Currently, memory bandwidth is the limiting factor for performing faster computa
 
 Both of the algorithms are agnostic to the number of threads per block. Meaning you can set threads per block to be whatever size you feel like. However, if you're using the shared memory algorithm, you will most likely gain more performance if you have a larger block size, because there will be fewer copies to shared memory. 
 
-### Benchmark Mode Results
-Tested with a GTX 980, which has 49152 bytes of shared memory per block, I was able to create the following benchmark:
+## Benchmark Mode Results
+Tested with a GTX 980, which has 49152 bytes of shared memory per block, I was able to create the following benchmarks:
+
+### Testing Sample Size 
 
 Initially, a random dataset that contained 4 elements was generated and the samplesize was initially set to 2. Each iteration of the test, the dataset size and the samplesize were doubled. Once the samplesize maxed out shared memory, it remained constant at the maximum amount that would fit in shared memory, which in my specific case was 11264 *(which happened when the dataset size was 32768 elements in size)*. Even as the dataset size continued to double, the samplesize remained 11264. If it did not, the two algorithms could not be compared to each other. Only the global memory algorithm would work. 
 
@@ -27,4 +29,15 @@ Of course, this is an extreme example. In most cases, when people are computing 
 
 Again at the final iteration, the dataset contained 268,435,456 elements (except this time the samplesize was 16). The shared memory version of the algorithm only has a 9.5% decrease in execution time. (Shared memory took 41.5 milliseconds. Global memory version took 45.9 milliseconds). 
 
-As a result, this algorithm is mainly efficient for high sample_size values and high threads per block values. 
+### Testing Blocksize Size 
+
+When testing how blocksize impacts preformance, the samplesize was set to 11264, and the number of dataset elements was set to 268,435,456. The only thing changed was the threads per blocks. The following are Linear and Logarithmic graphs of increasing blocksize. 
+
+![Linear Scale](img/benchmark_blocksize.png)
+![Logarithmic Scale](img/benchmark_blocksize_logarithmic.png)
+
+It's clear that larger blocksizes improve preformance. The larger the blocksize, the fewer copies from global to shared memory are needed.
+
+### Conclusion
+
+The shared memory algorithm is mostly efficient for high sample_size values and high threads per block values. 
